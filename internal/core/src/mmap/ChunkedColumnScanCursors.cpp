@@ -62,6 +62,7 @@ class FixedWidthDataScanCursor final
                    max_rows);
         out->values = ChunkedColumnInterface::ValueView{};
         out->validity = nullptr;
+        out->row_ids.clear();
         out->owner.reset();
         out->row_id_start = 0;
         out->size = 0;
@@ -269,6 +270,7 @@ class ViewDataScanCursor final : public ChunkedColumnInterface::ScanCursor {
     ResetOutput(ChunkedColumnInterface::ScanBatch* out) {
         out->values = ChunkedColumnInterface::ValueView{};
         out->validity = nullptr;
+        out->row_ids.clear();
         out->owner.reset();
         out->row_id_start = 0;
         out->size = 0;
@@ -424,20 +426,7 @@ MakeDataScanCursor(const ChunkedColumnInterface* column,
                    DataType data_type,
                    ChunkedColumnInterface::ScanProjection projection,
                    ChunkedColumnInterface::ScanValueKind value_kind) {
-    std::optional<ChunkedColumnInterface::ScanValueKind> column_kind;
-    if (ChunkedColumnInterface::IsPrimitiveDataType(data_type)) {
-        column_kind = ChunkedColumnInterface::ScanValueKind::FixedWidth;
-    } else if (data_type == DataType::JSON) {
-        column_kind = ChunkedColumnInterface::ScanValueKind::JsonView;
-    } else if (data_type == DataType::STRING ||
-               data_type == DataType::VARCHAR || data_type == DataType::TEXT ||
-               data_type == DataType::GEOMETRY) {
-        column_kind = ChunkedColumnInterface::ScanValueKind::StringView;
-    } else if (data_type == DataType::ARRAY) {
-        column_kind = ChunkedColumnInterface::ScanValueKind::ArrayView;
-    } else if (data_type == DataType::VECTOR_ARRAY) {
-        column_kind = ChunkedColumnInterface::ScanValueKind::VectorArrayView;
-    }
+    const auto column_kind = GetScanValueKindForDataType(data_type);
     if (!column_kind.has_value()) {
         return nullptr;
     }
@@ -447,15 +436,7 @@ MakeDataScanCursor(const ChunkedColumnInterface* column,
     // VECTOR_ARRAY null predicate cannot accidentally request a fixed-width
     // cursor through its expression template type.
     const auto resolved_kind =
-        projection == ChunkedColumnInterface::ScanProjection::NoData ||
-                value_kind == ChunkedColumnInterface::ScanValueKind::Default
-            ? *column_kind
-            : value_kind;
-    AssertInfo(resolved_kind == *column_kind,
-               "data scan kind {} does not match column type {}, expected {}",
-               static_cast<int>(resolved_kind),
-               data_type,
-               static_cast<int>(*column_kind));
+        ResolveDataScanValueKind(data_type, projection, value_kind);
 
     if (resolved_kind == ChunkedColumnInterface::ScanValueKind::FixedWidth) {
         return MakeFixedWidthDataScanCursor(column,
@@ -498,6 +479,11 @@ ChunkedColumnInterface::Scan(milvus::OpContext* op_ctx,
                              const ScanOptions& options) const {
     auto data_type = GetDefaultScanDataType();
     if (!data_type.has_value()) {
+        return nullptr;
+    }
+
+    if (options.output != ScanOutput::Data ||
+        options.predicate != ScanPredicate::None) {
         return nullptr;
     }
 
