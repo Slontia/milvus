@@ -1814,7 +1814,7 @@ func TestCore_RLSAPIs(t *testing.T) {
 		Actions:      createReq.GetActions(),
 		UsingExpr:    createReq.GetUsingExpr(),
 	}, nil).Once()
-	status, err := c.CreateRowPolicy(ctx, createReq)
+	status, err := c.createRowPolicy(ctx, createReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(status))
 
@@ -1835,7 +1835,7 @@ func TestCore_RLSAPIs(t *testing.T) {
 		Actions:      updateReq.GetActions(),
 		UsingExpr:    updateReq.GetUsingExpr(),
 	}, nil).Once()
-	status, err = c.UpdateRowPolicy(ctx, updateReq)
+	status, err = c.updateRowPolicy(ctx, updateReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(status))
 
@@ -1845,13 +1845,13 @@ func TestCore_RLSAPIs(t *testing.T) {
 		CollectionID: 20,
 		PolicyName:   dropReq.GetPolicyName(),
 	}, nil).Once()
-	status, err = c.DropRowPolicy(ctx, dropReq)
+	status, err = c.dropRowPolicy(ctx, dropReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(status))
 
 	listReq := &rlsutil.ListRowPoliciesRequest{DbName: "db1", CollectionName: "coll1"}
 	meta.EXPECT().ListRLSPolicies(mock.Anything, listReq).Return([]*rlsutil.RowPolicy{{PolicyName: "policy1"}}, nil).Once()
-	listResp, err := c.ListRowPolicies(ctx, listReq)
+	listResp, err := c.listRowPolicies(ctx, listReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(listResp.GetStatus()))
 	require.Len(t, listResp.GetPolicies(), 1)
@@ -1871,13 +1871,13 @@ func TestCore_RLSAPIs(t *testing.T) {
 		PrincipalName: setTagsReq.GetPrincipalName(),
 		Tags:          setTagsReq.GetTags(),
 	}, nil).Once()
-	status, err = c.SetRLSPrincipalTags(ctx, setTagsReq)
+	status, err = c.setRLSPrincipalTags(ctx, setTagsReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(status))
 
 	getTagsReq := &rlsutil.GetRLSPrincipalTagsRequest{DbName: "db1", CollectionName: "coll1", PrincipalName: "alice"}
 	meta.EXPECT().GetRLSPrincipalTags(mock.Anything, getTagsReq).Return(map[string]string{"dept": "sales"}, nil).Once()
-	getTagsResp, err := c.GetRLSPrincipalTags(ctx, getTagsReq)
+	getTagsResp, err := c.getRLSPrincipalTags(ctx, getTagsReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(getTagsResp.GetStatus()))
 	assert.Equal(t, map[string]string{"dept": "sales"}, getTagsResp.GetTags())
@@ -1885,7 +1885,7 @@ func TestCore_RLSAPIs(t *testing.T) {
 
 	listPrincipalsReq := &rlsutil.ListRLSPrincipalsRequest{DbName: "db1", CollectionName: "coll1"}
 	meta.EXPECT().ListRLSPrincipals(mock.Anything, listPrincipalsReq).Return([]string{"alice", "bob"}, nil).Once()
-	listPrincipalsResp, err := c.ListRLSPrincipals(ctx, listPrincipalsReq)
+	listPrincipalsResp, err := c.listRLSPrincipals(ctx, listPrincipalsReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(listPrincipalsResp.GetStatus()))
 	assert.Equal(t, []string{"alice", "bob"}, listPrincipalsResp.GetPrincipalNames())
@@ -1915,7 +1915,7 @@ func TestCore_RLSAPIs(t *testing.T) {
 		CollectionID:  20,
 		PrincipalName: deleteTagsReq.GetPrincipalName(),
 	}, true, nil).Once()
-	status, err = c.DeleteRLSPrincipalTags(ctx, deleteTagsReq)
+	status, err = c.deleteRLSPrincipalTags(ctx, deleteTagsReq)
 	require.NoError(t, err)
 	assert.True(t, merr.Ok(status))
 }
@@ -1930,31 +1930,31 @@ func TestCore_RLSAPIsRejectNilRequest(t *testing.T) {
 		require.True(t, errors.Is(merr.Error(status), merr.ErrParameterInvalid), status.GetReason())
 	}
 
-	status, err := c.CreateRowPolicy(ctx, nil)
+	status, err := c.createRowPolicy(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, status)
 
-	status, err = c.UpdateRowPolicy(ctx, nil)
+	status, err = c.updateRowPolicy(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, status)
 
-	status, err = c.DropRowPolicy(ctx, nil)
+	status, err = c.dropRowPolicy(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, status)
 
-	listResp, err := c.ListRowPolicies(ctx, nil)
+	listResp, err := c.listRowPolicies(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, listResp.GetStatus())
 
-	status, err = c.SetRLSPrincipalTags(ctx, nil)
+	status, err = c.setRLSPrincipalTags(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, status)
 
-	getTagsResp, err := c.GetRLSPrincipalTags(ctx, nil)
+	getTagsResp, err := c.getRLSPrincipalTags(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, getTagsResp.GetStatus())
 
-	listPrincipalsResp, err := c.ListRLSPrincipals(ctx, nil)
+	listPrincipalsResp, err := c.listRLSPrincipals(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, listPrincipalsResp.GetStatus())
 
@@ -1962,7 +1962,7 @@ func TestCore_RLSAPIsRejectNilRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.ErrorIs(t, merr.Error(metadataResp.GetStatus()), merr.ErrServiceInternal)
 
-	status, err = c.DeleteRLSPrincipalTags(ctx, nil)
+	status, err = c.deleteRLSPrincipalTags(ctx, nil)
 	require.NoError(t, err)
 	assertParameterInvalidStatus(t, status)
 }
@@ -1978,7 +1978,7 @@ func TestCore_RLSPolicyMutationReturnsCollectionLockFailure(t *testing.T) {
 		return 123, nil
 	}
 	c := newTestCore(withHealthyCode(), withMeta(meta), withIDAllocator(idAllocator))
-	status, err := c.CreateRowPolicy(context.Background(), &rlsutil.CreateRowPolicyRequest{
+	status, err := c.createRowPolicy(context.Background(), &rlsutil.CreateRowPolicyRequest{
 		DbName:         "db1",
 		CollectionName: "coll1",
 		PolicyName:     "policy1",
