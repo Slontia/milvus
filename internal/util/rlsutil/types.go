@@ -209,6 +209,27 @@ type RowPolicy struct {
 	PolicyId    int64
 }
 
+func (policy *RowPolicy) GetPolicyName() string {
+	if policy == nil {
+		return ""
+	}
+	return policy.PolicyName
+}
+
+func (policy *RowPolicy) GetPolicyType() PolicyType {
+	if policy == nil {
+		return PolicyTypeUnknown
+	}
+	return policy.PolicyType
+}
+
+func (policy *RowPolicy) GetActions() []PolicyAction {
+	if policy == nil {
+		return nil
+	}
+	return policy.Actions
+}
+
 func (policy *RowPolicy) GetUsingExpr() string {
 	if policy == nil {
 		return ""
